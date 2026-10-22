@@ -1,6 +1,6 @@
-# Qualia/walk 川越
+# Qualium 川越
 
-mitsulab の作品《Qualia/walk 川越》です。シリーズ《Qualia/walk》の一作で、walk 氷川の次の場所です。
+mitsulab の作品《Qualium 川越》です。Qualium は、ひとつの場所に Qualia の層（sight・sound・touch・sho など）が重なる場で、氷川に続く二つめの場所です。
 
 本川越駅から大正浪漫夢通り・一番街・時の鐘・札の辻・菓子屋横丁まで、およそ 1.65 km の道を、実寸の 3D の中で歩きます。蔵造りの町に、自然・歴史・文化の記録の層と、Qualia/sight・sound・touch・sho の層を重ねます。碧（あおい）がそばで、近くの記録を出典つきで話します。
 
