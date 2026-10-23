@@ -531,7 +531,7 @@ function kasaPeek(x, z) { return nearestOnLine(x, z).dist < 11 && !kasaBox(x, z,
 function loadKasane() {
   if (KASA.p) return KASA.p;
   return KASA.p = (async () => {
-    const M = await import("../kit/envAgents/kasane.js?v=20261023k");
+    const M = await import("../kit/envAgents/kasane.js?v=20261023m");
     const herd = KASA.herd = new M.KasaneHerd({ scene: world, camera, groundAt: (x, z) => groundY(x, z) + .06, walkable: kasaOk, walkSurface: kasaPeek, hud: COLOR5, avoid: () => AOI.root?.visible ? AOI.root.position : null, scale: MOBILE ? 3.2 : 2.9, mobile: MOBILE, maxDist: MOBILE ? 32 : 40, max: 28 });
     const near = (x, z, Rm = 9) => { if (kasaOk(x, z)) return [x, z]; for (let r = .5; r <= Rm; r += .5) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2 + r, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (kasaOk(px, pz)) return [px, pz]; } return null; };
     // 物陰：通りに面した店蔵・町家の角（角から 0.35 m 内側を物陰の中心とみなす）
@@ -541,22 +541,21 @@ function loadKasane() {
     const coverNear = (x, z) => { let best = null, bd = 16; for (const c of covers) { const d = Math.hypot(c.x - x, c.z - z); if (d < bd && d > 2 && [0, 1, 2, 3, 4, 5, 6, 7].filter(i => kasaPeek(c.x + Math.cos(i * .785) * (c.r + .1), c.z + Math.sin(i * .785) * (c.r + .1))).length >= 2) { bd = d; best = c; } } return best; };
     const usedC = new Set(); let k = 0; const crowd = (x, z) => herd.agents.filter(a => Math.hypot(a.anchor.x - x, a.anchor.y - z) < 11).length >= 5;   // 時の鐘のまわりのように地点が集まる所は、5 体まで
     const objs = LAYER.objs.filter(L => L.kind !== "sho" || true).map(L => ({ L, d: nearestOnLine(L.o.x, L.o.z).d })).sort((a, b) => a.d - b.d);
+    // 2026-10-23 本人「一人より、群れでわちゃわちゃしている方が可愛い」＝地点ごとに 3〜5 体の群れ（近くの地点の層の子も混ざる）。地点が集まる所は 12 m に一つの群れまで
+    const centers = [];
     for (const { L } of objs) {
-      const ly = top5(L.layer), tgt = { x: L.o.x, z: L.o.z }; k++;
-      const n = nearestOnLine(L.o.x, L.o.z), off = (k % 2 ? 1 : -1) * 6, b = atD(n.d + off);
-      const p = near(L.o.x, L.o.z); if (p && !crowd(p[0], p[1])) { const a = herd.add(ly, { x: p[0], z: p[1], radius: 1.8, data: L, target: tgt }); a.d = n.d; }
-      const q = near(b.x + (L.o.x - atD(n.d).x) * .4, b.z + (L.o.z - atD(n.d).z) * .4);   // 6 m となりに、もう一体（ふたつに一つは、二体で話す組）
-      if (q && !crowd(q[0], q[1])) { const a2 = herd.add(ly, { x: q[0], z: q[1], radius: 1.6, data: L, target: tgt }); a2.d = n.d + off;
-        if (k % 2 === 0) { const q2 = near(q[0] + .9, q[1] + .5, 2); if (q2) herd.pairUp(a2, herd.add(ly, { x: q2[0], z: q2[1], radius: 1.2, data: L, target: tgt })); } }
-      const c = coverNear(L.o.x, L.o.z); if (c && !usedC.has(c)) { usedC.add(c); const r = near(c.x, c.z, 3); if (r && !crowd(r[0], r[1])) { const a3 = herd.add(ly, { x: r[0], z: r[1], radius: 1.2, data: L, target: tgt, role: "watch" }); a3.d = n.d; } }
+      k++; const p = near(L.o.x, L.o.z); if (!p || centers.some(c => Math.hypot(c[0] - p[0], c[1] - p[1]) < 12)) continue; centers.push(p);
+      const n = 3 + (k % 3), others = objs.map(o => o.L).filter(o => o !== L && Math.hypot(o.o.x - L.o.x, o.o.z - L.o.z) < 30), mem = [{ layer: top5(L.layer), data: L, target: { x: L.o.x, z: L.o.z } }];
+      for (let m = 1; m < n; m++) { const O = others.length && m % 2 ? others[(k + m) % others.length] : L; mem.push({ layer: top5(O.layer), data: O, target: { x: O.o.x, z: O.o.z } }); }
+      const G = herd.addGroup(mem, { x: p[0], z: p[1], radius: 2.6, role: k % 3 === 0 ? "watch" : "" }); for (const a of G.members) a.d = nearestOnLine(p[0], p[1]).d;
     }
-    // 地点のない区間（本川越駅から夢通りなど）にも：通り全体の記録（台地の上の通り）の子と、生きもの（Qualia/sight）へ誘う子を 22 m ごとに
+    // 地点のない区間（本川越駅から夢通りなど）にも：通り全体の記録（台地の上の通り）の子と、生きもの（Qualia/sight）へ誘う子の群れを 34 m ごとに
     const daichi = LAYER.objs.find(L => L.o.id === "n_daichi"), endD = G.lineD[G.lineD.length - 1]; let g = 0;
-    for (let d = 12; d < endD - 6; d += 18) {
-      if (herd.agents.some(a => a.d != null && Math.abs(a.d - d) < 12)) continue;
-      const c = atD(d), side = (g % 2 ? 1 : -1) * (2 + (g % 3)), p = near(c.x + c.tz * side, c.z - c.tx * side, 4); if (!p) continue; g++;
-      const a = g % 3 === 0 ? herd.add("sight", { x: p[0], z: p[1], radius: 2, data: { sightPick: true } }) : daichi ? herd.add("nature", { x: p[0], z: p[1], radius: 2, data: daichi }) : null; if (a) a.d = d;
-      if (a && daichi && g % 2 === 0) { const q = near(p[0] + 1.1, p[1] + .6, 2); if (q) { const b2 = herd.add("nature", { x: q[0], z: q[1], radius: 1.2, data: daichi }); b2.d = d; herd.pairUp(a, b2); } }   // 二体で話す組にして、3 体ほどが見えるように
+    for (let d = 15; d < endD - 6 && daichi; d += 34) {
+      if (herd.agents.some(a => a.d != null && Math.abs(a.d - d) < 22)) continue;
+      const c = atD(d), side = (g % 2 ? 1 : -1) * 1.5, p = near(c.x + c.tz * side, c.z - c.tx * side, 4); if (!p) continue; g++;
+      const mem = [{ layer: "nature", data: daichi }, { layer: "sight", data: { sightPick: true } }, { layer: "nature", data: daichi }]; if (g % 2) mem.push({ layer: "sight", data: { sightPick: true } });
+      const G2 = herd.addGroup(mem, { x: p[0], z: p[1], radius: 2.6, role: g % 3 === 0 ? "watch" : "" }); for (const a of G2.members) a.d = d;
     }
     KASA.n = herd.agents.length; QW.KASA = KASA; herd.setLayers(LAYER.worn);
     await herd.load();
