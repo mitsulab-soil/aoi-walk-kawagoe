@@ -616,7 +616,7 @@ function kasaPeek(x, z) { return nearestOnLine(x, z).dist < 11 && !kasaBox(x, z,
 function loadKasane() {
   if (KASA.p) return KASA.p;
   return KASA.p = (async () => {
-    const M = await import("../kit/envAgents/kasane.js?v=20261024a");
+    const M = await import("../kit/envAgents/kasane.js?v=20261024k");
     const herd = KASA.herd = new M.KasaneHerd({ scene: world, camera, groundAt: (x, z) => groundY(x, z) + .06, walkable: kasaOk, walkSurface: kasaPeek, hud: COLOR5, avoid: () => AOI.root?.visible ? AOI.root.position : null, scale: MOBILE ? 3.2 : 2.9, mobile: MOBILE, maxDist: MOBILE ? 32 : 40, max: 24,
       muted: () => !soundOn, minCamDist: MOBILE ? 1.7 : 1.5, viewTitle: a => a.data?.o?.title || a.data?.title || "", viewSafe: () => ({ left: MOBILE ? 118 : 250, top: MOBILE ? 176 : 80 }) });   // v3（2026-10-23 夜）：大きさは部品で前の 0.75 倍・鳴き声は「声と音」に従う・目の前に入りすぎない・窓は層の一覧にかけない
     const near = (x, z, Rm = 9) => { if (kasaOk(x, z)) return [x, z]; for (let r = .5; r <= Rm; r += .5) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2 + r, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (kasaOk(px, pz)) return [px, pz]; } return null; };
@@ -972,7 +972,7 @@ function frame() {
   if (BLD.mat) BLD.mat.uniforms.amul.value += ((QW.mode === "fly" ? .7 : QW.mode === "sight" ? .06 : 1) - BLD.mat.uniforms.amul.value) * Math.min(1, dt * 3); DESAT.value += ((QW.mode === "sight" ? .8 : 0) - DESAT.value) * Math.min(1, dt * 3); if (BLD.lines) BLD.lines.material.opacity += ((QW.mode === "sight" ? .2 : .42) - BLD.lines.material.opacity) * Math.min(1, dt * 3);   // 2026-10-23 公開前：鳥の高さから見ると半透明の面が重なって町の外が水面に見えたので、sight では面をほとんど消し線を薄く   // 上から見ると面が重なって濃くなるので、面を薄く（線は残す）
   { const m = QW.mode, camH = camera.position.y - groundY(camera.position.x, camera.position.z), want = m === "sky" || m === "boot" ? 1 : m === "descend" ? Math.min(1, Math.max(0, (camH - 70) / 220)) : 0; CYBER.v.value += (want - CYBER.v.value) * Math.min(1, dt * 2.2); CYBER.scan.value = (performance.now() / 1000 * 70) % 2600 - 900;
     const vt = m === "sky" || m === "boot" ? 1 : 0; VEIL.k = (VEIL.k ?? 1) + (vt - (VEIL.k ?? 1)) * Math.min(1, dt * 1.8); const kc = VEIL.k, bg = kc > .995 ? NAVY : QW.skyBg; if (scene.background !== bg) scene.background = bg; VEIL.visible = bg !== NAVY && kc > .005; if (VEIL.visible) { VEIL.material.uniforms.opacity.value = kc; VEIL.position.copy(camera.position); VEIL.scale.setScalar(camera.far * .9); } scene.fog.color.copy(FOG).lerp(NAVY, CYBER.v.value); if (QW.near) QW.near.visible = CYBER.v.value < .5; }   // 3D 地図の電脳の地面（氷川と同じ）
-  stepLayer(dt); stepSho(dt); stepTalk(); WAVE.step(); stepSoundWalk(dt); KASA.herd?.update(dt, { active: QW.mode === "walk", busy: !$("#panel").hidden });
+  stepLayer(dt); stepSho(dt); stepTalk(); WAVE.step(); stepSoundWalk(dt); KASA.herd?.update(dt, { active: QW.mode === "walk", busy: !$("#panel").hidden || !!voiceQ });   // 碧が話しているあいだは、かさねっこの掛け合いを重ねない
   if (KURA.tags) stepTag();
   if (QW.mode === "walk") stepAoi(dt);
   if (QW.mode === "sight") stepBody(dt);
